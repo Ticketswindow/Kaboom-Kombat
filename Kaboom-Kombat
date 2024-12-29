@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaboom Kombat Membership</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      width: 80%;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1e1e1e;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.7);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h1 img {
+      width: 50px;
+      height: 50px;
+      margin-right: 10px;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    input, select, button {
+      width: auto;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: none;
+      border-radius: 5px;
+    }
+
+    input, select {
+      background: #333;
+      color: #ffffff;
+    }
+
+    button {
+      background: rgb(218, 205, 35);
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      width: 30%;
+    }
+
+    button:hover {
+      background: #b35f00;
+    }
+
+    #students-list h2 {
+      margin-top: 20px;
+    }
+
+    .student {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      padding: 20px;
+      background: #333;
+      border-radius: 5px;
+    }
+
+    .student img {
+      margin-right: 15px;
+    }
+ 
+    .student p {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <img src="Kaboom logo.png" alt="Kaboom Kombat Logo" />
+      Kaboom Kombat Membership
+    </h1>
+
+    <label for="student-name">Student Name:</label>
+    <input type="text" id="student-name" placeholder="Enter name" />
+
+    <label for="membership-type">Membership Type:</label>
+    <select id="membership-type">
+      <option value="standard">Standard</option>
+      <option value="professional">Professional</option>
+    </select>
+
+    <label for="profile-picture">Profile Picture:</label>
+    <input type="file" id="profile-picture" accept="image/*" />
+
+    <label for="end-date">Membership End Date:</label>
+    <input type="datetime-local" id="end-date" />
+
+    <label for="amount-paid">Amount Paid:</label>
+    <input type="number" id="amount-paid" placeholder="Enter amount paid" />
+
+    <button onclick="addStudent()" class="btt">Add Student</button>
+    <button onclick="showSummary()">Show Summary</button>
+
+    <div id="students-list">
+      <h2>Students:</h2>
+    </div>
+  </div>
+
+  <script>
+    let students = JSON.parse(localStorage.getItem('students')) || [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStudents();
+    });
+
+    function addStudent() {
+      const name = document.getElementById('student-name').value;
+      const membershipType = document.getElementById('membership-type').value;
+      const endDateInput = document.getElementById('end-date').value;
+      const pictureInput = document.getElementById('profile-picture');
+      const amountPaid = parseFloat(document.getElementById('amount-paid').value);
+
+      if (!name || !endDateInput || !pictureInput.files[0] || isNaN(amountPaid)) {
+        alert('Please fill out all fields.');
+        return;
+      }
+
+      const endDate = new Date(endDateInput).getTime();
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        const student = {
+          id: Date.now(),
+          name,
+          membershipType,
+          endDate,
+          picture: e.target.result,
+          amountPaid
+        };
+
+        students.push(student);
+        localStorage.setItem('students', JSON.stringify(students));
+        addStudentToDOM(student);
+      };
+
+      reader.readAsDataURL(pictureInput.files[0]);
+    }
+
+    function addStudentToDOM(student) {
+      const studentsList = document.getElementById('students-list');
+      const studentDiv = document.createElement('div');
+      studentDiv.classList.add('student');
+      studentDiv.id = `student-${student.id}`;
+
+      studentDiv.innerHTML = `
+        <img src="${student.picture}" alt="Profile Picture" style="width: 50px; height: 50px; border-radius: 50%;">
+        <div>
+          <p><strong>${student.name}</strong> (${student.membershipType})</p>
+          <p id="countdown-${student.id}"></p>
+          <p>Paid: $${student.amountPaid}</p>
+          <button onclick="confirmRemove(${student.id})">Remove</button>
+        </div>
+      `;
+
+      studentsList.appendChild(studentDiv);
+      startTimer(student);
+    }
+
+    function confirmRemove(id) {
+      const confirmation = confirm('Are you sure you want to remove this student?');
+      if (confirmation) {
+        removeStudent(id);
+      }
+    }
+
+    function removeStudent(id) {
+      students = students.filter(student => student.id !== id);
+      localStorage.setItem('students', JSON.stringify(students));
+      document.getElementById(`student-${id}`).remove();
+    }
+
+    function loadStudents() {
+      students.forEach(addStudentToDOM);
+    }
+
+    function showSummary() {
+      const totalPaid = students.reduce((sum, student) => sum + student.amountPaid, 0);
+      alert(`Total Amount Paid: $${totalPaid}`);
+    }
+
+    function startTimer(student) {
+      const countdownElement = document.getElementById(`countdown-${student.id}`);
+
+      function updateCountdown() {
+        const now = new Date().getTime();
+        const distance = student.endDate - now;
+
+        if (distance <= 0) {
+          countdownElement.innerHTML = "Membership Expired";
+        } else {
+          const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+          countdownElement.innerHTML = `${days}d ${hours}h ${minutes}m`;
+        }
+      }
+
+      setInterval(updateCountdown, 60000);
+      updateCountdown();
+    }
+  </script>
+</body>
+</html>
